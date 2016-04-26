@@ -1,3 +1,9 @@
 [submodule "3rd/hiredis"]
 	path = 3rd/hiredis
 	url = https://github.com/redis/hiredis.git
+[submodule "3rd/libzmq"]
+	path = 3rd/libzmq
+	url = https://github.com/zeromq/libzmq
+[submodule "3rd/cppzmq"]
+	path = 3rd/cppzmq
+	url = https://github.com/zeromq/cppzmq.git
