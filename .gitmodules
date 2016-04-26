@@ -7,3 +7,6 @@
 [submodule "3rd/cppzmq"]
 	path = 3rd/cppzmq
 	url = https://github.com/zeromq/cppzmq.git
+[submodule "3rd/libsodium"]
+	path = 3rd/libsodium
+	url = https://github.com/jedisct1/libsodium.git
