@@ -1,4 +1,4 @@
-CFLAGS = -g -O2 -Wall -pthread
+CFLAGS = -g -O2 -Wall -fpermissive
 
 HIREDIS_INC ?= ../3rd/hiredis-0.13.3
 HIREDIS_LIB ?= ../3rd/hiredis-0.13.3/libhiredis.a
@@ -10,10 +10,13 @@ BODIUM_LIB ?= /usr/local/lib/libsodium.a
 
 CC = g++ --std=c++11
 
-all : dbserver
+all : dbserver client
 
 dbserver : main.cpp
 	$(CC) -o $@ $^ -I$(HIREDIS_INC) -I$(ZEROMQ_INC) $(HIREDIS_LIB) $(ZEROMQ_LIB) $(BODIUM_LIB) -lpthread
 
+client : test.cpp
+	$(CC) -o $@ $^ -I$(ZEROMQ_INC) $(ZEROMQ_LIB) $(BODIUM_LIB) -lpthread
+
 clean :
-	rm dbserver
+	rm dbserver client
