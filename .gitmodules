@@ -10,3 +10,6 @@
 [submodule "3rd/libsodium"]
 	path = 3rd/libsodium
 	url = https://github.com/jedisct1/libsodium.git
+[submodule "3rd/mongo-c-driver"]
+	path = 3rd/mongo-c-driver
+	url = https://github.com/mongodb/mongo-c-driver.git
