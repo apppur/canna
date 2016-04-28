@@ -1,2 +1,2 @@
 # canna
-game server
+just a toy
