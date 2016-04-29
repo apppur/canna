@@ -12,7 +12,7 @@ CC = g++ --std=c++11
 
 all : dbserver client
 
-dbserver : main.cpp
+dbserver : main.cpp ../core/canna_daemon.cpp
 	$(CC) -o $@ $^ -I$(HIREDIS_INC) -I$(ZEROMQ_INC) $(HIREDIS_LIB) $(ZEROMQ_LIB) $(BODIUM_LIB) -lpthread
 
 client : test.cpp
