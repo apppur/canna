@@ -12,12 +12,15 @@
 #include <iostream>
 #include <unistd.h>
 #include <assert.h>
+#include <time.h>
 #include "hiredis.h"
 #include "bson.h"
 #include "bcon.h"
 #include "mongoc.h"
 #include "zmq.hpp"
-#include "../core/canna_daemon.h"
+#include "canna_daemon.h"
+#include "canna_core.h"
+#include "canna_random.h"
 
 #define COMMAND_LEN 256
 
@@ -33,7 +36,9 @@ int main(int argc, char **argv)
 
     int major, minor, patch;
     zmq::version(&major, &minor, &patch);
-    printf("current zeromq version is %d.%d.%d\n", major, minor, patch);
+    CaRandom random;
+    random.SetSeed((unsigned int)(canna_gettime()));
+    printf("current zeromq version is %d.%d.%d, timestamp %lu, random %u\n", major, minor, patch, canna_gettime(), random.Random(1024));
 
     redisContext *context = redisConnect("127.0.0.1", 6379);
     if (context == nullptr || context->err) {
