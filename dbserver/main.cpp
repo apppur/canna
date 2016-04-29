@@ -13,6 +13,9 @@
 #include <unistd.h>
 #include <assert.h>
 #include "hiredis.h"
+#include "bson.h"
+#include "bcon.h"
+#include "mongoc.h"
 #include "zmq.hpp"
 #include "../core/canna_daemon.h"
 
@@ -45,6 +48,43 @@ int main(int argc, char **argv)
         printf("Success: context init \n");
     }
 
+    mongoc_client_t         *mongoc_client;
+    mongoc_database_t       *database;
+    mongoc_collection_t     *collection;
+    bson_t                  *mongoc_command, reply, *insert;
+    bson_error_t            error;
+    char                    *str;
+    bool                    retval;
+
+    // required to initialize libmongoc's internals
+    mongoc_init();
+    // create a new client instance
+    mongoc_client = mongoc_client_new("mongodb://localhost:27017");
+    
+    database = mongoc_client_get_database(mongoc_client, "db_name");
+    collection = mongoc_client_get_collection(mongoc_client, "db_name", "coll_name");
+
+    mongoc_command = BCON_NEW("ping", BCON_INT32(1));
+    retval = mongoc_client_command_simple(mongoc_client, "admin", mongoc_command, nullptr, &reply, &error);
+    if (!retval) {
+        fprintf(stderr, "%s\n", error.message);
+        return EXIT_FAILURE;
+    }
+
+    str = bson_as_json(&reply, nullptr);
+    printf("%s\n", str);
+    
+    insert = BCON_NEW("hello", BCON_UTF8("world"));
+    if (!mongoc_collection_insert(collection, MONGOC_INSERT_NONE, insert, nullptr, &error)) {
+        fprintf(stderr, "%s\n", error.message);
+    }
+
+    bson_destroy(insert);
+    bson_destroy(&reply);
+    bson_destroy(mongoc_command);
+    bson_free(str);
+
+
     //redisReply *reply = (redisReply *)redisCommand(context, "SET foo barbarbar");
 
 
@@ -74,7 +114,14 @@ int main(int argc, char **argv)
 
         freeReplyObject(result);
     }
-        return 0;
+
+    mongoc_collection_destroy(collection);
+    mongoc_database_destroy(database);
+    mongoc_client_destroy(mongoc_client);
+    mongoc_cleanup();
+
+    daemon_exit("./dbserver.pid");
+    return 0;
 }
 
 void signal_usr1(int signal)
