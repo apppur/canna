@@ -14,12 +14,16 @@ BSON_INC ?= ../3rd/libmongo/lib
 
 BODIUM_LIB ?= /usr/local/lib/libsodium.a
 
+INC := -I$(HIREDIS_INC) -I$(ZEROMQ_INC) -I$(MONGO_INC) -I$(BSON_INC)
+SRC := $(wildcard *.cpp)
+LIBS := -lpthread -lmongoc-1.0 -lbson-1.0
+
 CC = g++ --std=c++11
 
 all : dbserver client
 
 dbserver : main.cpp ../core/canna_daemon.cpp
-	$(CC) -o $@ $^ -I$(HIREDIS_INC) -I$(ZEROMQ_INC) -I$(BSON_INC) -I$(MONGO_INC) -L$(MONGO_LIB) -lmongoc-1.0 -lbson-1.0 $(HIREDIS_LIB) $(ZEROMQ_LIB) $(BODIUM_LIB) -lpthread
+	$(CC) -o $@ $^ $(INC) -L$(MONGO_LIB) $(LIBS) $(HIREDIS_LIB) $(ZEROMQ_LIB) $(BODIUM_LIB)
 
 client : test.cpp
 	$(CC) -o $@ $^ -I$(ZEROMQ_INC) $(ZEROMQ_LIB) $(BODIUM_LIB) -lpthread
