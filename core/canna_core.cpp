@@ -1,9 +1,12 @@
 #include <sys/time.h>
+#include <stdlib.h>
 
 #include <iostream>
 #include <sstream>
 #include <iomanip>
 #include "canna_core.h"
+
+//#define CANNA_RAND(seed) (int) ((float)(seed)*random()/(RAND_MAX + 1.0))
 
 uint64_t canna_gettime()
 {
@@ -82,4 +85,23 @@ void canna_dump(zmq::socket_t &socket)
             break;
         }
     }
+}
+
+std::string canna_setid(zmq::socket_t &socket)
+{
+    std::stringstream ss;
+    ss << std::hex << std::uppercase
+        << std::setw(4) << std::setfill('0') << CANNA_RAND(0x10000) << "-"
+        << std::setw(4) << std::setfill('0') << CANNA_RAND(0x10000);
+    socket.setsockopt(ZMQ_IDENTITY, ss.str().c_str(), ss.str().length());
+
+    return ss.str();
+}
+
+void canna_sleep(int msecs)
+{
+    struct timespec t;
+    t.tv_sec = msecs / 1000;
+    t.tv_nsec = (msecs % 1000) * 1000000;
+    nanosleep(&t, nullptr);
 }
