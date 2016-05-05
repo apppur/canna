@@ -48,8 +48,10 @@ int main(int argc, char** argv)
     int worker_fired = 0;
     while (true) {
         std::string identity = canna_recv(broker);
-        canna_recv(broker);
-        canna_recv(broker);
+        {
+            canna_recv(broker);
+            canna_recv(broker);
+        }
 
         canna_sendmore(broker, identity);
         canna_sendmore(broker, "");
@@ -67,4 +69,6 @@ int main(int argc, char** argv)
     for (int i = 0; i < work_count; i++) {
         pthread_join(workers[i], nullptr);
     }
+
+    return 0;
 }
