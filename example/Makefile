@@ -22,7 +22,7 @@ LIBS := -lpthread -lmongoc-1.0 -lbson-1.0
 
 CC = g++ --std=c++11
 
-all : ventilator taskwork tasksink identitycheck routerreq routerdealer
+all : ventilator taskwork tasksink identitycheck routerreq routerdealer lbbroker
 
 ventilator : ventilator.cpp ../core/canna_daemon.cpp ../core/canna_core.cpp
 	$(CC) -o $@ $^ -I$(CORE_INC) -I$(ZEROMQ_INC) $(ZEROMQ_LIB) -lpthread
@@ -42,5 +42,8 @@ routerreq : routerreq.cpp ../core/canna_core.cpp
 routerdealer : routerdealer.cpp ../core/canna_core.cpp
 	$(CC) -o $@ $^ -I$(CORE_INC) -I$(ZEROMQ_INC) $(ZEROMQ_LIB) -lpthread
 
+lbbroker : lbbroker.cpp ../core/canna_core.cpp
+	$(CC) -o $@ $^ -I$(CORE_INC) -I$(ZEROMQ_INC) $(ZEROMQ_LIB) -lpthread
+
 clean :
-	rm ventilator taskwork tasksink identitycheck routerreq routerdealer
+	rm ventilator taskwork tasksink identitycheck routerreq routerdealer lbbroker
