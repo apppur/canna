@@ -10,7 +10,7 @@ static void* work_thread(void *arg)
     zmq::socket_t worker(context, ZMQ_DEALER);
 
     canna_setid(worker);
-    worker.connect("tcp:://localhost:5671");
+    worker.connect("tcp://localhost:5671");
 
     int total = 0;
 
@@ -36,7 +36,7 @@ int main(int argc, char** argv)
 {
     zmq::context_t context(1);
     zmq::socket_t broker(context, ZMQ_ROUTER);
-    broker.bind("tcp:://*:5671");
+    broker.bind("tcp://*:5671");
 
     const int work_count = 10;
     pthread_t workers[work_count];
