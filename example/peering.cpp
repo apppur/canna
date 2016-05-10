@@ -20,6 +20,7 @@ int main(int argc, char** argv)
 
     zmq::socket_t statebe(context, ZMQ_PUB);
     char statebe_ipc[64];
+    memset(statebe_ipc, 0, sizeof(statebe_ipc));
     sprintf(statebe_ipc, "ipc://%s-state.ipc", self);
     statebe.bind(statebe_ipc);
 
@@ -29,8 +30,9 @@ int main(int argc, char** argv)
     for (int index = 2; index < argc; index++) {
         char *peer = argv[index];
         char statefe_ipc[64];
+        memset(statefe_ipc, 0, sizeof(statefe_ipc));
         sprintf(statebe_ipc, "ipc://%s-state.ipc", peer);
-        printf("I: connecting to state backend at '%s'\n", peer);
+        printf("I: connecting to state backend at '%s'\n", statefe_ipc);
         statefe.connect(statefe_ipc);
     }
 
