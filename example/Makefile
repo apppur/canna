@@ -1,4 +1,4 @@
-CFLAGS = -g -O2 -Wall -fpermissive
+CFLAGS = -g -Wall -fpermissive
 
 HIREDIS_INC ?= ../3rd/hiredis-0.13.3
 HIREDIS_LIB ?= ../3rd/hiredis-0.13.3/libhiredis.a
@@ -22,7 +22,8 @@ LIBS := -lpthread -lmongoc-1.0 -lbson-1.0
 
 CC = g++ --std=c++11
 
-all : ventilator taskwork tasksink identitycheck routerreq routerdealer lbbroker asyncdeamon
+all : ventilator taskwork tasksink identitycheck routerreq routerdealer lbbroker asyncdeamon \
+	peering
 
 ventilator : ventilator.cpp ../core/canna_daemon.cpp ../core/canna_core.cpp
 	$(CC) -o $@ $^ -I$(CORE_INC) -I$(ZEROMQ_INC) $(ZEROMQ_LIB) -lpthread
@@ -48,5 +49,9 @@ lbbroker : lbbroker.cpp ../core/canna_core.cpp
 asyncdeamon : asyncdeamon.cpp ../core/canna_core.cpp
 	$(CC) -o $@ $^ -I$(CORE_INC) -I$(ZEROMQ_INC) $(ZEROMQ_LIB) -lpthread
 
+peering : peering.cpp ../core/canna_core.cpp
+	$(CC) -o $@ $^ -I$(CORE_INC) -I$(ZEROMQ_INC) $(ZEROMQ_LIB) -lpthread
+
 clean :
-	rm ventilator taskwork tasksink identitycheck routerreq routerdealer lbbroker asyncdeamon
+	rm ventilator taskwork tasksink identitycheck routerreq routerdealer lbbroker asyncdeamon \
+		peering
