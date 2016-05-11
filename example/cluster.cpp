@@ -9,9 +9,10 @@
 
 #define CLIENTS_NUM 10
 #define WORKERS_NUM 5
-#define WORKER_READY "\001"
+#define WORKER_READY "READY"
 
 static char *self;
+static int serial = 0;
 
 static void * client_task(void *args)
 {
@@ -31,12 +32,10 @@ static void * client_task(void *args)
         canna_sleep(CANNA_RAND(5));
         int burst = CANNA_RAND(15);
         while (burst--) {
-            char task_id[5] = {0};
-            sprintf(task_id, "%04X", CANNA_RAND(0x10000));
-            canna_send(client, task_id);
+            canna_send(client, "WORK");
 
             zmq::pollitem_t pollset[1] = {{(void *)client, 0, ZMQ_POLLIN, 0}};
-            zmq::poll(pollset, 1, 1000);
+            zmq::poll(pollset, 1, -1);
 
             if (pollset[0].revents & ZMQ_POLLIN) {
                 std::string reply = canna_recv(client);
@@ -54,6 +53,9 @@ static void * worker_task(void *args)
 {
     zmq::context_t context(1);
     zmq::socket_t work(context, ZMQ_REQ);
+    //char uuid[16] = {0};
+    //sprintf(uuid, "work:%d", serial++);
+    //work.setsockopt(ZMQ_IDENTITY, uuid, 16);
     char work_ipc[64] = {0};
     sprintf(work_ipc, "ipc://%s-localbe.ipc", self);
     work.connect(work_ipc);
@@ -63,7 +65,6 @@ static void * worker_task(void *args)
     while (true) {
         std::string msg = canna_recv(work);
         canna_sleep(CANNA_RAND(2));
-        canna_send(work, msg);
     }
 
     return nullptr;
@@ -154,8 +155,12 @@ int main(int argc, char **argv)
         }
 
         if (pollset[0].revents & ZMQ_POLLIN) {
+            canna_dump(localbe);
             std::string identity = canna_recv(localbe);
             worker_queue.push(identity);
+            std::string empty = canna_recv(localbe);
+            std::string msg = canna_recv(localbe);
+            printf("%s: %s\n", identity.c_str(), msg.c_str());
         } else if (pollset[1].revents & ZMQ_POLLIN) {
         }
 
