@@ -31,7 +31,7 @@ int main(int argc, char** argv)
         char *peer = argv[index];
         char statefe_ipc[64];
         memset(statefe_ipc, 0, sizeof(statefe_ipc));
-        sprintf(statebe_ipc, "ipc://%s-state.ipc", peer);
+        sprintf(statefe_ipc, "ipc://%s-state.ipc", peer);
         printf("I: connecting to state backend at '%s'\n", statefe_ipc);
         statefe.connect(statefe_ipc);
     }
