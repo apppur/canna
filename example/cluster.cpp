@@ -160,8 +160,15 @@ int main(int argc, char **argv)
             worker_queue.push(identity);
             std::string empty = canna_recv(localbe);
             std::string msg = canna_recv(localbe);
-            printf("%s: %s\n", identity.c_str(), msg.c_str());
+            /*
+            if (msg == "READY") {
+                canna_sendmore(localbe, identity);
+                canna_sendmore(localbe, "");
+                canna_send(localbe, "GO");
+            }
+            */
         } else if (pollset[1].revents & ZMQ_POLLIN) {
+            canna_dump(cloudbe);
         }
 
         if (pollset[2].revents & ZMQ_POLLIN) {
@@ -171,5 +178,8 @@ int main(int argc, char **argv)
             std::string status = canna_recv(monitor);
             printf("%s\n", status.c_str());
         }
+
+        canna_sleep(5000);
+        canna_send(cloudbe, "CLOUD");
     }
 }

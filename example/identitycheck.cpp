@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "zmq.hpp"
 #include "canna_core.h"
 
@@ -20,6 +21,14 @@ int main(int argc, char** argv)
 
     canna_send(identified, "ROUTER socket use REQ's identity");
     canna_dump(sink);
+
+    zmq::socket_t apple(context, ZMQ_ROUTER);
+    apple.setsockopt(ZMQ_IDENTITY, "APPPLE", 6);
+    apple.connect("inproc://identity.inproc");
+
+    canna_send(apple, "ROUTER socket use REQ's identity");
+    canna_dump(sink);
+    printf("*******************************************");
 
     return 0;
 }
