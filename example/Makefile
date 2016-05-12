@@ -23,7 +23,7 @@ LIBS := -lpthread -lmongoc-1.0 -lbson-1.0
 CC = g++ --std=c++11
 
 all : ventilator taskwork tasksink identitycheck routerreq routerdealer lbbroker asyncdeamon \
-	peering cluster
+	peering cluster peering1
 
 ventilator : ventilator.cpp ../core/canna_daemon.cpp ../core/canna_core.cpp
 	$(CC) -o $@ $^ -I$(CORE_INC) -I$(ZEROMQ_INC) $(ZEROMQ_LIB) -lpthread
@@ -55,6 +55,9 @@ peering : peering.cpp ../core/canna_core.cpp
 cluster : cluster.cpp ../core/canna_core.cpp
 	$(CC) -o $@ $^ -I$(CORE_INC) -I$(ZEROMQ_INC) $(ZEROMQ_LIB) -lpthread
 
+peering1 : peering1.cpp ../core/canna_core.cpp
+	$(CC) -o $@ $^ -I$(CORE_INC) -I$(ZEROMQ_INC) $(ZEROMQ_LIB) -lpthread
+
 clean :
 	rm ventilator taskwork tasksink identitycheck routerreq routerdealer lbbroker asyncdeamon \
-		peering cluster *.ipc
+		peering cluster peering1 *.ipc
