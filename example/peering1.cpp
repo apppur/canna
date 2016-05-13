@@ -144,6 +144,7 @@ int main(int argc, char **argv)
         }
 
         if (pollset[1].revents & ZMQ_POLLIN) {
+            printf("***********************************************************");
             std::string cloud_identity = canna_recv(cloudbe);
             std::string empty = canna_recv(cloudbe);
             std::string reply = canna_recv(cloudbe);
@@ -160,12 +161,15 @@ int main(int argc, char **argv)
             zmq::poll(frontends, 2, 0);
             int reroutable = 0;
             std::string msg;
-            /*
             if (frontends[1].revents & ZMQ_POLLIN) {
-                msg = canna_recv(cloudfe);
-                reroutable = 0;
-            } else 
-            */
+                printf("***********************************************************");
+                std::string cloud_identity = canna_recv(cloudfe);
+                std::string empty = canna_recv(cloudfe);
+                std::string reply = canna_recv(cloudfe);
+                printf("***********************************************************");
+                printf("CLOUD INFO: %s, %s\n", cloud_identity.c_str(), reply.c_str());
+                printf("***********************************************************");
+            }
             if (frontends[0].revents & ZMQ_POLLIN) {
                 std::string identity = canna_recv(localfe);
                 std::string empty = canna_recv(localfe);
@@ -176,7 +180,7 @@ int main(int argc, char **argv)
                 //if (CANNA_RAND(5) == 0) {
                     canna_sendmore(cloudbe, cloud);
                     canna_sendmore(cloudbe, "");
-                    canna_sendmore(cloudbe, "CLOUD");
+                    canna_send(cloudbe, "CLOUD");
                 //} else {
                     std::string worker_addr = worker_queue.front();
                     worker_queue.pop();
