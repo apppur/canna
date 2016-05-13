@@ -6,8 +6,8 @@
 #include "zmq.hpp"
 #include "canna_core.h"
 
-#define CLIENT_NUM 10
-#define WORKER_NUM 5
+#define CLIENT_NUM 5
+#define WORKER_NUM 3
 #define WORKER_READY "READY"
 
 static char *self;
@@ -25,7 +25,7 @@ static void * client_task(void *args)
         canna_send(client, "HELLO");
         std::string reply = canna_recv(client);
         printf("CLIENT: %s\n", reply.c_str());
-        canna_sleep(1000);
+        //canna_sleep(1000);
     }
 
     return nullptr;
@@ -41,13 +41,17 @@ static void * worker_task(void *args)
     printf("worker task ipc: %s\n", worker_ipc);
     worker.connect(worker_ipc);
 
-    canna_sleep(2000);
+    //canna_sleep(1000);
 
     canna_send(worker, WORKER_READY);
 
     while (true) {
+        std::string address = canna_recv(worker);
+        std::string empty = canna_recv(worker);
         std::string reply = canna_recv(worker);
         printf("WORKER: %s\n", reply.c_str());
+        canna_sendmore(worker, address);
+        canna_sendmore(worker, "");
         canna_send(worker, reply);
     }
 
@@ -116,46 +120,71 @@ int main(int argc, char **argv)
         zmq::poll(pollset, 1, -1);
 
         if (pollset[0].revents & ZMQ_POLLIN) {
-            std::string msg = canna_recv(localbe);
-            printf("***************************: %s\n", msg.c_str());
-
+            std::string work_identity = canna_recv(localbe);
+            std::string empty = canna_recv(localbe);
+            worker_queue.push(work_identity);
             capacity++;
             
-            if (msg == WORKER_READY) {
+            printf("///////////////////////////////////\n");
+            std::string client_addr = canna_recv(localbe);
+            if (client_addr == WORKER_READY) {
             } else
             {
-                canna_send(localfe, msg);
+                {
+                    std::string empty = canna_recv(localbe);
+                }
+                std::string reply = canna_recv(localbe);
+                printf("===============================:%s\n", reply.c_str());
+                canna_sendmore(localfe, client_addr);
+                canna_sendmore(localfe, "");
+                canna_send(localfe, "SUCCESS");
             }
         }
 
-        /*
         while (capacity) {
             zmq::pollitem_t frontends[] = {
                 {(void *)localfe, 0, ZMQ_POLLIN, 0},
                 //{(void *)cloudfe, 0, ZMQ_POLLIN, 0}
             };
-            zmq::poll(frontends, 1, 1);
+            zmq::poll(frontends, 1, -1);
             int reroutable = 0;
             std::string msg;
-            //if (frontends[1].revents & ZMQ_POLLIN) {
-            //    msg = canna_recv(cloudfe);
-            //    reroutable = 0;
-            //} else 
+            /*
+            if (frontends[1].revents & ZMQ_POLLIN) {
+                msg = canna_recv(cloudfe);
+                reroutable = 0;
+            } else 
+            */
             if (frontends[0].revents & ZMQ_POLLIN) {
-                msg = canna_recv(localfe);
-                printf("***************************");
+                std::string identity = canna_recv(localfe);
+                std::string empty = canna_recv(localfe);
+                std::string reply = canna_recv(localfe);
+                printf("RECV msg: %s from client, capacity: %d\n", reply.c_str(), capacity);
                 reroutable = 1;
+            
+                std::string worker_addr = worker_queue.front();
+                worker_queue.pop();
+                canna_sendmore(localbe, worker_addr);
+                canna_sendmore(localbe, "");
+                canna_sendmore(localbe, identity);
+                canna_sendmore(localbe, "");
+                canna_send(localbe, "WORLD");
+                reroutable--;
+                capacity--;
             } else {
                 break;
             }
 
+            /*
             if (reroutable) {
-                canna_send(localbe, msg);
+                canna_sendmore(localbe, identity);
+                canna_sendmore(localbe, "");
+                canna_send(localbe, "WORLD");
                 reroutable--;
                 capacity--;
             }
+            */
         }
-        */
     }
 
     return 0;
