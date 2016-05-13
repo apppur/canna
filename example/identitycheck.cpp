@@ -7,6 +7,7 @@ int main(int argc, char** argv)
     zmq::context_t context(1);
     
     zmq::socket_t sink(context, ZMQ_ROUTER);
+    sink.setsockopt(ZMQ_IDENTITY, "PURPLE", 6);
     sink.bind("inproc://identity.inproc");
 
     zmq::socket_t anonymous(context, ZMQ_REQ);
@@ -26,9 +27,11 @@ int main(int argc, char** argv)
     apple.setsockopt(ZMQ_IDENTITY, "APPPLE", 6);
     apple.connect("inproc://identity.inproc");
 
+    canna_sendmore(apple, "PURPLE");
+    canna_sendmore(apple, "");
     canna_send(apple, "ROUTER socket use REQ's identity");
     canna_dump(sink);
-    printf("*******************************************");
+    printf("*******************************************\n");
 
     return 0;
 }

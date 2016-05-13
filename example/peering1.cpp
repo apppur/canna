@@ -11,6 +11,7 @@
 #define WORKER_READY "READY"
 
 static char *self;
+static char *cloud;
 
 static void * client_task(void *args)
 {
@@ -78,6 +79,7 @@ int main(int argc, char **argv)
     zmq::socket_t cloudbe(context, ZMQ_ROUTER);
     cloudbe.setsockopt(ZMQ_IDENTITY, self, strlen(self));
     for (int i = 2; i < argc; i++) {
+        cloud = argv[i];
         char *peer = argv[i];
         char peer_ipc[64] = {0};
         sprintf(peer_ipc, "ipc://%s-cloud.ipc", peer_ipc);
@@ -96,8 +98,8 @@ int main(int argc, char **argv)
     printf("localbe ipc: %s\n", localbe_ipc);
     localbe.bind(localbe_ipc);
 
-    //printf("Press enter when all broker are started: ");
-    //getchar();
+    printf("Press enter when all broker are started: ");
+    getchar();
 
     for (int i = 0; i < WORKER_NUM; i++) {
         pthread_t pid;
@@ -114,10 +116,10 @@ int main(int argc, char **argv)
     while (true) {
         zmq::pollitem_t pollset[] = {
             {(void *)localbe, 0, ZMQ_POLLIN, 0},
-            //{(void *)cloudbe, 0, ZMQ_POLLIN, 0}
+            {(void *)cloudbe, 0, ZMQ_POLLIN, 0}
         };
 
-        zmq::poll(pollset, 1, -1);
+        zmq::poll(pollset, 2, 0);
 
         if (pollset[0].revents & ZMQ_POLLIN) {
             std::string work_identity = canna_recv(localbe);
@@ -141,12 +143,21 @@ int main(int argc, char **argv)
             }
         }
 
+        if (pollset[1].revents & ZMQ_POLLIN) {
+            std::string cloud_identity = canna_recv(cloudbe);
+            std::string empty = canna_recv(cloudbe);
+            std::string reply = canna_recv(cloudbe);
+            printf("***********************************************************");
+            printf("CLOUD INFO: %s, %s\n", cloud_identity.c_str(), reply.c_str());
+            printf("***********************************************************");
+        }
+
         while (capacity) {
             zmq::pollitem_t frontends[] = {
                 {(void *)localfe, 0, ZMQ_POLLIN, 0},
-                //{(void *)cloudfe, 0, ZMQ_POLLIN, 0}
+                {(void *)cloudfe, 0, ZMQ_POLLIN, 0}
             };
-            zmq::poll(frontends, 1, -1);
+            zmq::poll(frontends, 2, 0);
             int reroutable = 0;
             std::string msg;
             /*
@@ -162,15 +173,21 @@ int main(int argc, char **argv)
                 printf("RECV msg: %s from client, capacity: %d\n", reply.c_str(), capacity);
                 reroutable = 1;
             
-                std::string worker_addr = worker_queue.front();
-                worker_queue.pop();
-                canna_sendmore(localbe, worker_addr);
-                canna_sendmore(localbe, "");
-                canna_sendmore(localbe, identity);
-                canna_sendmore(localbe, "");
-                canna_send(localbe, "WORLD");
-                reroutable--;
-                capacity--;
+                //if (CANNA_RAND(5) == 0) {
+                    canna_sendmore(cloudbe, cloud);
+                    canna_sendmore(cloudbe, "");
+                    canna_sendmore(cloudbe, "CLOUD");
+                //} else {
+                    std::string worker_addr = worker_queue.front();
+                    worker_queue.pop();
+                    canna_sendmore(localbe, worker_addr);
+                    canna_sendmore(localbe, "");
+                    canna_sendmore(localbe, identity);
+                    canna_sendmore(localbe, "");
+                    canna_send(localbe, "WORLD");
+                    reroutable--;
+                    capacity--;
+                //}
             } else {
                 break;
             }
