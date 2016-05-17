@@ -13,7 +13,7 @@ int main(int argc, char** argv)
     socket.connect("ipc://purple.ipc");
 
     zmq::socket_t back(context, ZMQ_ROUTER);
-    back.setsockopt(ZMQ_IDENTITY, "APPPLE1", 6);
+    back.setsockopt(ZMQ_IDENTITY, "APPPLE1", 7);
     back.bind("ipc://apple.ipc");
 
     canna_sleep(3000);

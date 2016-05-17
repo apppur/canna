@@ -35,7 +35,7 @@ int main(int argc, char** argv)
     sink.bind("ipc://purple.ipc");
 
     zmq::socket_t front(context, ZMQ_ROUTER);
-    front.setsockopt(ZMQ_IDENTITY, "PURPLE1", 6);
+    front.setsockopt(ZMQ_IDENTITY, "PURPLE1", 7);
     front.connect("ipc://apple.ipc");
 
     /*
@@ -64,7 +64,7 @@ int main(int argc, char** argv)
     };
 
     while (true) {
-        zmq::poll(pollset, 1, 0);
+        zmq::poll(pollset, 2, 0);
 
         if (pollset[0].revents & ZMQ_POLLIN) {
             printf("************************************\n");
@@ -77,14 +77,13 @@ int main(int argc, char** argv)
             canna_sendmore(sink, "APPPLE");
             canna_send(sink, "ACK");
 
-            canna_sendmore(front, "APPPLE1");
-            canna_send(front, "hello world");
             printf("************************************\n");
         }
 
         if (pollset[1].revents & ZMQ_POLLIN) {
-
         }
+        canna_sendmore(front, "APPPLE1");
+        canna_send(front, "hello world");
     }
 
     return 0;
