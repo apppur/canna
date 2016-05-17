@@ -113,21 +113,24 @@ int main(int argc, char **argv)
 
     int capacity = 0;
     std::queue<std::string> worker_queue;
+
+    zmq::pollitem_t pollset[] = {
+        //{(void *)localbe, 0, ZMQ_POLLIN, 0},
+        {(void *)cloudbe, 0, ZMQ_POLLIN, 0},
+        {(void *)cloudfe, 0, ZMQ_POLLIN, 0}
+    };
+
     while (true) {
-        zmq::pollitem_t pollset[] = {
-            {(void *)localbe, 0, ZMQ_POLLIN, 0},
-            {(void *)cloudbe, 0, ZMQ_POLLIN, 0}
-        };
 
         zmq::poll(pollset, 2, 0);
 
+        /*
         if (pollset[0].revents & ZMQ_POLLIN) {
             std::string work_identity = canna_recv(localbe);
             std::string empty = canna_recv(localbe);
             worker_queue.push(work_identity);
             capacity++;
             
-            printf("///////////////////////////////////\n");
             std::string client_addr = canna_recv(localbe);
             if (client_addr == WORKER_READY) {
             } else
@@ -136,21 +139,26 @@ int main(int argc, char **argv)
                     std::string empty = canna_recv(localbe);
                 }
                 std::string reply = canna_recv(localbe);
-                printf("===============================:%s\n", reply.c_str());
                 canna_sendmore(localfe, client_addr);
                 canna_sendmore(localfe, "");
                 canna_send(localfe, "SUCCESS");
             }
         }
+        */
 
-        if (pollset[1].revents & ZMQ_POLLIN) {
-            printf("***********************************************************");
+        if (pollset[0].revents & ZMQ_POLLIN) {
+            printf("***********************************************************\n");
             std::string cloud_identity = canna_recv(cloudbe);
-            std::string empty = canna_recv(cloudbe);
             std::string reply = canna_recv(cloudbe);
-            printf("***********************************************************");
             printf("CLOUD INFO: %s, %s\n", cloud_identity.c_str(), reply.c_str());
-            printf("***********************************************************");
+            printf("***********************************************************\n");
+        }
+        if (pollset[1].revents & ZMQ_POLLIN) {
+            printf("***********************************************************\n");
+            std::string cloud_identity = canna_recv(cloudfe);
+            std::string reply = canna_recv(cloudfe);
+            printf("CLOUD INFO: %s, %s\n", cloud_identity.c_str(), reply.c_str());
+            printf("***********************************************************\n");
         }
 
         while (capacity) {
@@ -164,7 +172,6 @@ int main(int argc, char **argv)
             if (frontends[1].revents & ZMQ_POLLIN) {
                 printf("***********************************************************");
                 std::string cloud_identity = canna_recv(cloudfe);
-                std::string empty = canna_recv(cloudfe);
                 std::string reply = canna_recv(cloudfe);
                 printf("***********************************************************");
                 printf("CLOUD INFO: %s, %s\n", cloud_identity.c_str(), reply.c_str());
@@ -174,12 +181,12 @@ int main(int argc, char **argv)
                 std::string identity = canna_recv(localfe);
                 std::string empty = canna_recv(localfe);
                 std::string reply = canna_recv(localfe);
-                printf("RECV msg: %s from client, capacity: %d\n", reply.c_str(), capacity);
+                //printf("RECV msg: %s from client, capacity: %d\n", reply.c_str(), capacity);
                 reroutable = 1;
             
                 //if (CANNA_RAND(5) == 0) {
+                    printf("cloud identity: %s\n", cloud);
                     canna_sendmore(cloudbe, cloud);
-                    canna_sendmore(cloudbe, "");
                     canna_send(cloudbe, "CLOUD");
                 //} else {
                     std::string worker_addr = worker_queue.front();
@@ -206,6 +213,11 @@ int main(int argc, char **argv)
             }
             */
         }
+        printf("11111111111111111111111111111111111111111111111111111111111\n");
+        canna_sleep(3000);
+        canna_sendmore(cloudbe, cloud);
+        canna_send(cloudbe, "I come from cloud");
+        printf("22222222222222222222222222222222222222222222222222222222222\n\n");
     }
 
     return 0;
