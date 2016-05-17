@@ -31,7 +31,8 @@ int main(int argc, char** argv)
     zmq::socket_t sink(context, ZMQ_ROUTER);
     //zmq::socket_t sink(context, ZMQ_REP);
     sink.setsockopt(ZMQ_IDENTITY, "PURPLE", 6);
-    sink.bind("tcp://*:5555");
+    //sink.bind("tcp://*:5555");
+    sink.bind("ipc://purple.ipc");
 
     /*
     zmq::socket_t apple(context, ZMQ_ROUTER);
@@ -54,17 +55,22 @@ int main(int argc, char** argv)
 
 
     while (true) {
-        printf("************************************\n");
-        std::string identity = canna_recv(sink);
-        printf("IDENTITY: %s\n", identity.c_str());
-        std::string reply = canna_recv(sink);
-        printf("REPLY: %s\n", reply.c_str());
-        printf("************************************\n");
+        zmq::pollitem_t pollset[] = {
+            {(void *)sink, 0, ZMQ_POLLIN, 0}
+        };
+        zmq::poll(pollset, 1, 0);
 
-        canna_sendmore(sink, "APPPLE");
-        canna_send(sink, "ACK");
+        if (pollset[0].revents & ZMQ_POLLIN) {
+            printf("************************************\n");
+            std::string identity = canna_recv(sink);
+            printf("IDENTITY: %s\n", identity.c_str());
+            std::string reply = canna_recv(sink);
+            printf("REPLY: %s\n", reply.c_str());
+            printf("************************************\n");
 
-        canna_sleep(2000);
+            canna_sendmore(sink, "APPPLE");
+            canna_send(sink, "ACK");
+        }
     }
 
     return 0;
