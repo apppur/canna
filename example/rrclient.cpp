@@ -11,14 +11,19 @@ int main(int argc, char** argv)
     socket.setsockopt(ZMQ_IDENTITY, "APPPLE", 6);
     socket.connect("tcp://localhost:5555");
 
-    canna_sleep(5000);
-
-    canna_sendmore(socket, "PURPLE");
-    canna_sendmore(socket, "");
-    canna_send(socket, "Hello World!!!");
+    canna_sleep(3000);
 
     while (true) {
-        canna_sleep(5000);
+        printf("=================================\n");
+        canna_sendmore(socket, "PURPLE");
+        canna_send(socket, "Hello World!!!");
+
+        std::string identity = canna_recv(socket);
+        std::string reply = canna_recv(socket);
+        printf("IDENTITY: %s\n", identity.c_str());
+        printf("REPLY: %s\n", reply.c_str());
+        printf("=================================\n");
+        canna_sleep(3000);
     }
 
     return 0;

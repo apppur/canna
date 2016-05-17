@@ -26,14 +26,11 @@ static void * work_thread(void * arg) {
 
 int main(int argc, char** argv)
 {
-    std::cout << "-------------------------------";
-    printf("************************************");
     zmq::context_t context(1);
     
-    //zmq::socket_t sink(context, ZMQ_ROUTER);
-    zmq::socket_t sink(context, ZMQ_REP);
+    zmq::socket_t sink(context, ZMQ_ROUTER);
+    //zmq::socket_t sink(context, ZMQ_REP);
     sink.setsockopt(ZMQ_IDENTITY, "PURPLE", 6);
-    printf("************************************");
     sink.bind("tcp://*:5555");
 
     /*
@@ -55,15 +52,19 @@ int main(int argc, char** argv)
     //pthread_t pid;
     //pthread_create(&pid, nullptr, work_thread, nullptr);
 
-    printf("************************************");
 
     while (true) {
+        printf("************************************\n");
         std::string identity = canna_recv(sink);
-        std::string empty = empty = canna_recv(sink);
+        printf("IDENTITY: %s\n", identity.c_str());
         std::string reply = canna_recv(sink);
-        printf("RECV: %s\n", reply.c_str());
+        printf("REPLY: %s\n", reply.c_str());
+        printf("************************************\n");
 
-        canna_sleep(5000);
+        canna_sendmore(sink, "APPPLE");
+        canna_send(sink, "ACK");
+
+        canna_sleep(2000);
     }
 
     return 0;
