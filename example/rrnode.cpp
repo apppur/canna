@@ -54,10 +54,11 @@ int main(int argc, char** argv)
     //pthread_create(&pid, nullptr, work_thread, nullptr);
 
 
+    zmq::pollitem_t pollset[] = {
+        {(void *)sink, 0, ZMQ_POLLIN, 0}
+    };
+
     while (true) {
-        zmq::pollitem_t pollset[] = {
-            {(void *)sink, 0, ZMQ_POLLIN, 0}
-        };
         zmq::poll(pollset, 1, 0);
 
         if (pollset[0].revents & ZMQ_POLLIN) {
