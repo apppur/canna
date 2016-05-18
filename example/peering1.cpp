@@ -77,13 +77,19 @@ int main(int argc, char **argv)
     cloudfe.bind(cloudfe_ipc);
     
     zmq::socket_t cloudbe(context, ZMQ_ROUTER);
-    cloudbe.setsockopt(ZMQ_IDENTITY, self, strlen(self));
+    char *cloud_id = new char[strlen(self)+2+1];
+    sprintf(cloud_id, "%s", self);
+    cloud_id[strlen(self)] = 'b';
+    cloud_id[strlen(self)+1] = 'e';
+    cloud_id[strlen(self)+2] = '\0';
+    printf("CLOUD IDENTITY: %s\n", cloud_id);
+    cloudbe.setsockopt(ZMQ_IDENTITY, cloud_id, strlen(cloud_id));
     for (int i = 2; i < argc; i++) {
         cloud = argv[i];
         char *peer = argv[i];
         char peer_ipc[64] = {0};
-        sprintf(peer_ipc, "ipc://%s-cloud.ipc", peer_ipc);
-        printf("I: connecting to cloud frontend at %s \n", peer);
+        sprintf(peer_ipc, "ipc://%s-cloud.ipc", peer);
+        printf("I: connecting to cloud frontend at %s \n", peer_ipc);
         cloudbe.connect(peer_ipc);
     }
 
@@ -115,8 +121,13 @@ int main(int argc, char **argv)
     std::queue<std::string> worker_queue;
 
     zmq::pollitem_t pollset[] = {
-        //{(void *)localbe, 0, ZMQ_POLLIN, 0},
+        {(void *)localbe, 0, ZMQ_POLLIN, 0},
         {(void *)cloudbe, 0, ZMQ_POLLIN, 0},
+        //{(void *)cloudfe, 0, ZMQ_POLLIN, 0}
+    };
+
+    zmq::pollitem_t frontends[] = {
+        {(void *)localfe, 0, ZMQ_POLLIN, 0},
         {(void *)cloudfe, 0, ZMQ_POLLIN, 0}
     };
 
@@ -124,7 +135,6 @@ int main(int argc, char **argv)
 
         zmq::poll(pollset, 2, 0);
 
-        /*
         if (pollset[0].revents & ZMQ_POLLIN) {
             std::string work_identity = canna_recv(localbe);
             std::string empty = canna_recv(localbe);
@@ -144,44 +154,46 @@ int main(int argc, char **argv)
                 canna_send(localfe, "SUCCESS");
             }
         }
-        */
 
-        if (pollset[0].revents & ZMQ_POLLIN) {
-            printf("***********************************************************\n");
+        if (pollset[1].revents & ZMQ_POLLIN) {
+            printf("===========================================================\n");
             std::string cloud_identity = canna_recv(cloudbe);
             std::string reply = canna_recv(cloudbe);
-            printf("CLOUD INFO: %s, %s\n", cloud_identity.c_str(), reply.c_str());
-            printf("***********************************************************\n");
+            printf("CLOUD BE INFO: %s, %s\n", cloud_identity.c_str(), reply.c_str());
+            printf("===========================================================\n");
         }
+        /*
         if (pollset[1].revents & ZMQ_POLLIN) {
             printf("***********************************************************\n");
             std::string cloud_identity = canna_recv(cloudfe);
             std::string reply = canna_recv(cloudfe);
-            printf("CLOUD INFO: %s, %s\n", cloud_identity.c_str(), reply.c_str());
+            printf("CLOUD FE INFO: %s, %s\n", cloud_identity.c_str(), reply.c_str());
+            canna_sendmore(cloudfe, cloud_identity);
+            canna_send(cloudfe, "ACK ECHO");
             printf("***********************************************************\n");
         }
+        */
 
         while (capacity) {
-            zmq::pollitem_t frontends[] = {
-                {(void *)localfe, 0, ZMQ_POLLIN, 0},
-                {(void *)cloudfe, 0, ZMQ_POLLIN, 0}
-            };
+
             zmq::poll(frontends, 2, 0);
+
             int reroutable = 0;
             std::string msg;
             if (frontends[1].revents & ZMQ_POLLIN) {
-                printf("***********************************************************");
+                printf("***********************************************************\n");
                 std::string cloud_identity = canna_recv(cloudfe);
                 std::string reply = canna_recv(cloudfe);
-                printf("***********************************************************");
                 printf("CLOUD INFO: %s, %s\n", cloud_identity.c_str(), reply.c_str());
-                printf("***********************************************************");
+                canna_sendmore(cloudfe, cloud_identity);
+                canna_send(cloudfe, "ACK ECHO");
+                printf("***********************************************************\n");
             }
             if (frontends[0].revents & ZMQ_POLLIN) {
                 std::string identity = canna_recv(localfe);
                 std::string empty = canna_recv(localfe);
                 std::string reply = canna_recv(localfe);
-                //printf("RECV msg: %s from client, capacity: %d\n", reply.c_str(), capacity);
+                printf("RECV msg: %s from client, capacity: %d\n", reply.c_str(), capacity);
                 reroutable = 1;
             
                 //if (CANNA_RAND(5) == 0) {
@@ -213,11 +225,6 @@ int main(int argc, char **argv)
             }
             */
         }
-        printf("11111111111111111111111111111111111111111111111111111111111\n");
-        canna_sleep(3000);
-        canna_sendmore(cloudbe, cloud);
-        canna_send(cloudbe, "I come from cloud");
-        printf("22222222222222222222222222222222222222222222222222222222222\n\n");
     }
 
     return 0;
