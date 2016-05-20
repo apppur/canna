@@ -152,8 +152,10 @@ int socket_server::server_listen(uintptr_t opaque, const char *addr, int port, i
 {
     int fd = do_listen(addr, port, backlog);
     if (fd < 0) {
+        printf("do listen failed\n");
         return -1;
     }
+    printf("run listen success!\n");
 
     struct request_package request;
     int id = reserve_id();
