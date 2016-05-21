@@ -135,6 +135,7 @@ void socket_server::send_request(struct request_package *request, char type, int
 {
     request->header[6] = (uint8_t)type;
     request->header[7] = (uint8_t)len;
+    printf("send request type: %c, len:%d\n", type, len);
     for ( ; ; ) {
         int n = write(sendctrl_fd, &request->header[6], len+2);
         if (n < 0) {
@@ -170,7 +171,7 @@ int socket_server::server_listen(uintptr_t opaque, const char *addr, int port, i
     return id;
 }
 
-void socket_server::block_readpipe(int pipefd, void *bufffer, int sz) 
+void socket_server::block_readpipe(int pipefd, void *buffer, int sz) 
 {
     for ( ; ; ) {
         int n = read(pipefd, buffer, sz);
@@ -181,6 +182,7 @@ void socket_server::block_readpipe(int pipefd, void *bufffer, int sz)
             fprintf(stderr, "socket-server: read pipe error %s.\n", strerror(errno));
             return;
         }
+        printf("The size: %d, %d\n", n, sz);
         assert(n == sz);
         return;
     }
@@ -201,7 +203,7 @@ int socket_server::ctrl_cmd()
     int fd = recvctrl_fd;
     uint8_t buffer[256];
     uint8_t header[2];
-    block_readpipe(fd, header, sizeof(header));
+    block_readpipe(fd, (void *)header, sizeof(header));
     int type = header[0];
     int len = header[1];
     block_readpipe(fd, buffer, len);
@@ -212,7 +214,7 @@ int socket_server::ctrl_cmd()
         case 'B':
             break;
         case 'L':
-            printf("start to listen \n");
+            printf("**************start to listen**************** \n");
         case 'K':
             break;
         case 'O':
@@ -236,4 +238,23 @@ int socket_server::ctrl_cmd()
             break;
     }
     return -1;
+}
+
+int socket_server::poll()
+{
+    for ( ; ; ) {
+        if (checkctrl) {
+            if (has_cmd()) {
+                int type = ctrl_cmd();
+                if (type != -1) {
+                    return type;
+                } else 
+                {
+                    continue;
+                }
+            } else {
+                checkctrl = 0;
+            }
+        }
+    }
 }
