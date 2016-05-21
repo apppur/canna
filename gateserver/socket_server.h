@@ -137,6 +137,8 @@ class socket_server
         void block_readpipe(int pipefd, void *buffer, int sz);
         int has_cmd();
         int ctrl_cmd();
+
+        struct socket * new_socket(int id, int fd, int protocol, uintptr_t opaque, bool add);
     private:
         int recvctrl_fd;
         int sendctrl_fd;

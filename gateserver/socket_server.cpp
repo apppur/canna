@@ -258,3 +258,24 @@ int socket_server::poll()
         }
     }
 }
+
+struct socket * socket_server::new_socket(int id, int fd, int protocol, uintptr_t opaque, bool add)
+{
+    struct socket * s = &slot[HASH_ID(id)];
+    assert(s->type == SOCKET_TYPE_RESERVE);
+
+    if (add) {
+        if (event_fd.add(fd, s)) {
+            s->type = SOCKET_TYPE_INVALID;
+            return nullptr;
+        }
+    }
+
+    s->id = id;
+    s->fd = fd;
+    s->protocol = protocol;
+
+    s->opaque = opaque;
+
+    return s;
+}
