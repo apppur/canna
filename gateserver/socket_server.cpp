@@ -1,3 +1,16 @@
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/tcp.h>
+#include <unistd.h>
+#include <errno.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <assert.h>
+#include <string.h>
+
 #include "socket_server.h"
 
 void socket_server::initialize()
@@ -166,7 +179,7 @@ int socket_server::server_listen(uintptr_t opaque, const char *addr, int port, i
     }
     request.u.listen.opaque = opaque;
     request.u.listen.id = id;
-    request.u.listen.id = fd;
+    request.u.listen.fd = fd;
     send_request(&request, 'L', sizeof(request.u.listen));
     return id;
 }
@@ -198,7 +211,7 @@ int socket_server::has_cmd() {
     return 0;
 }
 
-int socket_server::ctrl_cmd() 
+int socket_server::ctrl_cmd(struct socket_message * result) 
 {
     int fd = recvctrl_fd;
     uint8_t buffer[256];
@@ -215,6 +228,7 @@ int socket_server::ctrl_cmd()
             break;
         case 'L':
             printf("**************start to listen**************** \n");
+            return listen_socket((struct request_listen *)buffer, result);
         case 'K':
             break;
         case 'O':
@@ -240,12 +254,12 @@ int socket_server::ctrl_cmd()
     return -1;
 }
 
-int socket_server::poll()
+int socket_server::poll(struct socket_message * result, int * more)
 {
     for ( ; ; ) {
         if (checkctrl) {
             if (has_cmd()) {
-                int type = ctrl_cmd();
+                int type = ctrl_cmd(result);
                 if (type != -1) {
                     return type;
                 } else 
@@ -278,4 +292,25 @@ struct socket * socket_server::new_socket(int id, int fd, int protocol, uintptr_
     s->opaque = opaque;
 
     return s;
+}
+
+int socket_server::listen_socket(struct request_listen * request, struct socket_message * result)
+{
+    int id = request->id;
+    int listen_fd = request->fd;
+    struct socket * s = new_socket(id, listen_fd, PROTOCOL_TCP, request->opaque, false);
+    if (s == nullptr) {
+        goto _failed;
+    }
+    s->type = SOCKET_TYPE_PLISTEN;
+    return -1;
+_failed:
+    close(listen_fd);
+    result->opaque = request->opaque;
+    result->id = id;
+    result->ud = 0;
+    result->data = nullptr;
+    slot[HASH_ID(id)].type = SOCKET_TYPE_INVALID;
+     
+    return SOCKET_ERROR;
 }

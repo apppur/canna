@@ -1,38 +1,15 @@
 #ifndef _SOCKET_SERVER_H
 #define _SOCKET_SERVER_H
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/tcp.h>
-#include <unistd.h>
-#include <errno.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <assert.h>
-#include <string.h>
-
 #include "socket_poll.h"
+#include "socket_define.h"
 
-#define SOCKET_DATA 0
-#define SOCKET_CLOSE 1
-#define SOCKET_OPEN 2
-#define SOCKET_ACCEPT 3
-#define SOCKET_ERROR 4
-#define SOCKET_EXIT 5
-#define SOCKET_UDP 6
-
-#define MAX_INFO 128
-#define MAX_SOCKET_P 16
-#define MAX_SOCKET (1<<MAX_SOCKET_P)
-#define MAX_EVENT 64
-
-#define HASH_ID(id) (((unsigned)id) % MAX_SOCKET)
-
-#define SOCKET_TYPE_INVALID 0
-#define SOCKET_TYPE_RESERVE 1
+struct socket_message {
+    int id;
+    uintptr_t opaque;
+    int ud;
+    char * data;
+};
 
 struct socket {
     uintptr_t opaque;
@@ -125,7 +102,7 @@ class socket_server
         void release();
 
         int server_listen(uintptr_t opaque, const char * addr, int port, int backlog);
-        int poll();
+        int poll(struct socket_message * result, int *more);
 
     private:
         int do_bind(const char *host, int port, int protocol, int *family);
@@ -136,9 +113,10 @@ class socket_server
 
         void block_readpipe(int pipefd, void *buffer, int sz);
         int has_cmd();
-        int ctrl_cmd();
+        int ctrl_cmd(struct socket_message * result);
 
         struct socket * new_socket(int id, int fd, int protocol, uintptr_t opaque, bool add);
+        int listen_socket(struct request_listen * request, struct socket_message * result);
     private:
         int recvctrl_fd;
         int sendctrl_fd;
