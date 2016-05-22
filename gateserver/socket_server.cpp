@@ -270,6 +270,35 @@ int socket_server::poll(struct socket_message * result, int * more)
                 checkctrl = 0;
             }
         }
+        if (event_index == event_n) {
+            event_n = event_fd.wait(ev, MAX_EVENT);
+            checkctrl = 1;
+            if (more) {
+                *more = 0;
+            }
+            event_index = 0;
+            if (event_n <= 0) {
+                event_n = 0;
+                return -1;
+            }
+        }
+        struct event * e = &ev[event_index++];
+        struct socket * s = (struct socket *)e->s;
+        if (s == nullptr) {
+            continue;
+        }
+        switch (s->type) {
+            case SOCKET_TYPE_CONNECTING:
+                break;
+            case SOCKET_TYPE_LISTEN:
+                printf("********new client connect*********\n");
+                if (report_accept(s, result)) {
+                    return SOCKET_ACCEPT;
+                }
+                break;
+            default:
+                break;
+        }
     }
 }
 
@@ -313,4 +342,58 @@ _failed:
     slot[HASH_ID(id)].type = SOCKET_TYPE_INVALID;
      
     return SOCKET_ERROR;
+}
+
+
+void socket_server::keepalive(int fd)
+{
+    int keepalive = 1;
+    setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&keepalive, sizeof(keepalive));
+}
+
+void socket_server::nonblocking(int fd) {
+    int flag = fcntl(fd, F_GETFL, 0);
+    if (-1 == flag) {
+        return;
+    }
+
+    fcntl(fd, F_SETFL, flag | O_NONBLOCK);
+}
+
+int socket_server::report_accept(struct socket *s, struct socket_message *result)
+{
+    union sockaddr_all u;
+    socklen_t len = sizeof(u);
+    int client_fd = accept(s->fd, &u.s, &len);
+    if (client_fd < 0) {
+        return 0;
+    }
+    int id = reserve_id();
+    if (id < 0) {
+        close(client_fd);
+        return 0;
+    }
+    keepalive(client_fd);
+    nonblocking(client_fd);
+
+    struct socket *ns = new_socket(id, client_fd, PROTOCOL_TCP, s->opaque, false);
+    if (ns == nullptr) {
+        close(client_fd);
+        return 0;
+    }
+    ns->type = SOCKET_TYPE_PACCEPT;
+    result->opaque = s->opaque;
+    result->id = s->id;
+    result->ud = id;
+    result->data = nullptr;
+
+    void * sin_addr = (u.s.sa_family == AF_INET) ? (void *)&u.v4.sin_addr : (void *)&u.v6.sin6_addr;
+    int sin_port = ntohs((u.s.sa_family == AF_INET) ? u.v4.sin_port : u.v6.sin6_port);
+    char tmp[INET6_ADDRSTRLEN];
+    if (inet_ntop(u.s.sa_family, sin_addr, tmp, sizeof(tmp))) {
+        snprintf(buffer, sizeof(buffer), "%s:%d", tmp, sin_port);
+        result->data = buffer;
+    }
+
+    return 1;
 }

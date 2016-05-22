@@ -92,6 +92,12 @@ struct request_package {
     uint8_t dummy[256];
 };
 
+union sockaddr_all {
+    struct sockaddr s;
+    struct sockaddr_in v4;
+    struct sockaddr_in6 v6;
+};
+
 class socket_server
 {
     public:
@@ -117,6 +123,11 @@ class socket_server
 
         struct socket * new_socket(int id, int fd, int protocol, uintptr_t opaque, bool add);
         int listen_socket(struct request_listen * request, struct socket_message * result);
+
+        void keepalive(int fd);
+        void nonblocking(int fd);
+
+        int report_accept(struct socket *s, struct socket_message *result);
     private:
         int recvctrl_fd;
         int sendctrl_fd;
