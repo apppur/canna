@@ -9,6 +9,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <string.h>
+#include <stdio.h>
 
 class socket_poll
 {
@@ -22,6 +25,7 @@ class socket_poll
             ev.events = EPOLLIN;
             ev.data.ptr = ud;
             if (epoll_ctl(m_fd, EPOLL_CTL_ADD, sock, &ev) == -1) {
+                printf("add epoll event failed\n");
                 return 1;
             }
             return 0;
@@ -45,6 +49,12 @@ class socket_poll
                 unsigned flag = ev[i].events;
                 e[i].write = (flag & EPOLLOUT) != 0;
                 e[i].read = (flag & EPOLLIN) != 0;
+            }
+
+            if (n == 0) {
+                printf("no fd is ready, please again\n");
+            } else if (n < 0) {
+                printf("error cause the error msg: %s\n", strerror(errno));
             }
 
             return n;

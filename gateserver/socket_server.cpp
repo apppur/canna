@@ -223,7 +223,8 @@ int socket_server::ctrl_cmd(struct socket_message * result)
 
     switch (type) {
         case 'S':
-            break;
+            printf("**************server start**************** \n");
+            return start_socket((struct request_start *)buffer, result);
         case 'B':
             break;
         case 'L':
@@ -397,3 +398,41 @@ int socket_server::report_accept(struct socket *s, struct socket_message *result
 
     return 1;
 }
+
+void socket_server::server_start(uintptr_t opaque, int id)
+{
+    struct request_package request;
+    request.u.start.id = id;
+    request.u.start.opaque = opaque;
+    send_request(&request, 'S', sizeof(request.u.start));
+}
+
+int socket_server::start_socket(struct request_start * request, struct socket_message * result)
+{
+    int id = request->id;
+    result->id = id;
+    result->opaque = request->opaque;
+    result->ud = 0;
+    result->data = nullptr;
+    struct socket *s = &slot[HASH_ID(id)];
+    if (s->type == SOCKET_TYPE_INVALID || s->id != id) {
+        return SOCKET_ERROR;
+    }
+    if (s->type == SOCKET_TYPE_PACCEPT || s->type == SOCKET_TYPE_PLISTEN) {
+        if (event_fd.add(s->fd, s)) {
+            s->type = SOCKET_TYPE_INVALID;
+            return SOCKET_ERROR;
+        }
+        s->type = (s->type == SOCKET_TYPE_PACCEPT) ? SOCKET_TYPE_CONNECTED : SOCKET_TYPE_LISTEN;
+        s->opaque = request->opaque;
+        result->data = (char *)"start";
+        return SOCKET_OPEN;
+    } else if (s->type == SOCKET_TYPE_CONNECTED) {
+        s->opaque = request->opaque;
+        result->data = (char *)"transfer";
+        return SOCKET_OPEN;
+    }
+
+    return -1;
+}
+

@@ -108,6 +108,7 @@ class socket_server
         void release();
 
         int server_listen(uintptr_t opaque, const char * addr, int port, int backlog);
+        void server_start(uintptr_t opaque, int id);
         int poll(struct socket_message * result, int *more);
 
     private:
@@ -123,6 +124,7 @@ class socket_server
 
         struct socket * new_socket(int id, int fd, int protocol, uintptr_t opaque, bool add);
         int listen_socket(struct request_listen * request, struct socket_message * result);
+        int start_socket(struct request_start * request, struct socket_message * result);
 
         void keepalive(int fd);
         void nonblocking(int fd);
