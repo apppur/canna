@@ -1,5 +1,22 @@
 #include <stdio.h>
+#include <pthread.h>
 #include "socket_server.h"
+
+static void * client(void * ud)
+{
+    socket_server * s = (socket_server *) ud;
+    if (s == nullptr) {
+        printf("socket server ptr: null\n");
+        return nullptr;
+    }
+    for (int i = 0; i < 3; i++) {
+        s->server_connect(400+i, "127.0.0.1", 8888);
+    }
+
+    while (true) {
+        sleep(5);
+    }
+}
 
 int main(int argc, char **argv)
 {
@@ -7,6 +24,12 @@ int main(int argc, char **argv)
     server.initialize();
     int l = server.server_listen(100, nullptr, 8888, 32);
     server.server_start(101, l);
+
+    pthread_t pid;
+    pthread_create(&pid, nullptr, client, &server);
+    //pthread_join(pid, nullptr);
+
+    printf("==========server poll run=============");
     struct socket_message result;
     int more;
     for ( ; ; ) {

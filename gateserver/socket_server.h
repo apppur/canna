@@ -3,6 +3,7 @@
 
 #include "socket_poll.h"
 #include "socket_define.h"
+#include <stdlib.h>
 
 struct socket_message {
     int id;
@@ -11,13 +12,44 @@ struct socket_message {
     char * data;
 };
 
+struct write_buffer {
+    struct write_buffer * next;
+    void * buffer;
+    char * ptr;
+    int sz;
+    bool userobject;
+};
+
+#define SIZEOF_TCPBUFFER (sizeof(write_buffer))
+
+struct wb_list {
+    struct write_buffer * head;
+    struct write_buffer * tail;
+
+    void wb_clear() { head = tail = nullptr; }
+    void wb_free() {
+        struct write_buffer * wb = head;
+        while (wb) {
+            struct write_buffer * tmp = wb;
+            wb = wb->next;
+            free(tmp->buffer);
+            free(tmp);
+        }
+        head = nullptr;
+        tail = nullptr;
+    }
+};
+
 struct socket {
     uintptr_t opaque;
+    struct wb_list high;
+    struct wb_list low;
     int64_t wb_size;
     int fd;
     int id;
     uint16_t protocol;
     uint16_t type;
+    int size;
 };
 
 struct request_open {
@@ -109,6 +141,8 @@ class socket_server
 
         int server_listen(uintptr_t opaque, const char * addr, int port, int backlog);
         void server_start(uintptr_t opaque, int id);
+        int server_bind(uintptr_t opaque, int fd);
+        int server_connect(uintptr_t opaque, const char * addr, int port);
         int poll(struct socket_message * result, int *more);
 
     private:
@@ -125,11 +159,26 @@ class socket_server
         struct socket * new_socket(int id, int fd, int protocol, uintptr_t opaque, bool add);
         int listen_socket(struct request_listen * request, struct socket_message * result);
         int start_socket(struct request_start * request, struct socket_message * result);
+        int bind_socket(struct request_bind * request, struct socket_message * result);
+        int open_request(struct request_package * req, uintptr_t opaque, const char * addr, int port);
+        int open_socket(struct request_open * request, struct socket_message * result);
+        int close_socket(struct request_close * request, struct socket_message * result);
 
         void keepalive(int fd);
         void nonblocking(int fd);
+        void setopt_socket(struct request_setopt * request);
+        void force_close(struct socket * s, socket_message * result);
 
         int report_accept(struct socket *s, struct socket_message *result);
+        int report_connect(struct socket *s, struct socket_message *result);
+        void clear_closed_event(struct socket_message * result, int type);
+
+        int send_list(struct socket *s, struct wb_list *list, struct socket_message *result);
+        int send_list_tcp(struct socket *s, struct wb_list *list, struct socket_message *result);
+        int list_uncomplete(struct wb_list * s);
+        void raise_uncomplete(struct socket * s);
+        int send_buffer(struct socket * s, struct socket_message * result);
+        int send_buffer_empty(struct socket * s) { return (s->high.head == nullptr && s->low.head == nullptr); }
     private:
         int recvctrl_fd;
         int sendctrl_fd;

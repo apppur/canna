@@ -40,6 +40,8 @@ void socket_server::initialize()
 
     for (int i = 0; i < MAX_SOCKET; i++) {
         slot[i].type = SOCKET_TYPE_INVALID;
+        slot[i].high.wb_clear();
+        slot[i].low.wb_clear();
     }
 
     alloc_id = 0;
@@ -55,6 +57,13 @@ void socket_server::initialize()
 
 void socket_server::release()
 {
+    struct socket_message dummy;
+    for (int i = 0; i < MAX_SOCKET; i++) {
+        struct socket * s = &slot[i];
+        if (s->type != SOCKET_TYPE_RESERVE) {
+            force_close(s, &dummy);
+        }
+    }
     close(sendctrl_fd);
     close(recvctrl_fd);
     event_fd.release();
@@ -223,19 +232,21 @@ int socket_server::ctrl_cmd(struct socket_message * result)
 
     switch (type) {
         case 'S':
-            printf("**************server start**************** \n");
             return start_socket((struct request_start *)buffer, result);
         case 'B':
-            break;
+            return bind_socket((struct request_bind *)buffer, result);
         case 'L':
-            printf("**************start to listen**************** \n");
             return listen_socket((struct request_listen *)buffer, result);
         case 'K':
-            break;
+            return close_socket((struct request_close *)buffer, result);
         case 'O':
-            break;
+            return open_socket((struct request_open *)buffer, result);;
         case 'X':
-            break;
+            result->opaque = 0;
+            result->ud = 0;
+            result->id = 0;
+            result->data = nullptr;
+            return SOCKET_EXIT;
         case 'D':
             break;
         case 'P':
@@ -245,7 +256,8 @@ int socket_server::ctrl_cmd(struct socket_message * result)
         case 'C':
             break;
         case 'T':
-            break;
+            setopt_socket((struct request_setopt *)buffer);
+            return -1;
         case 'U':
             break;
         default:
@@ -262,6 +274,7 @@ int socket_server::poll(struct socket_message * result, int * more)
             if (has_cmd()) {
                 int type = ctrl_cmd(result);
                 if (type != -1) {
+                    clear_closed_event(result, type);
                     return type;
                 } else 
                 {
@@ -290,14 +303,26 @@ int socket_server::poll(struct socket_message * result, int * more)
         }
         switch (s->type) {
             case SOCKET_TYPE_CONNECTING:
-                break;
+                printf("********connect ing*********\n");
+                return report_connect(s, result);
             case SOCKET_TYPE_LISTEN:
                 printf("********new client connect*********\n");
                 if (report_accept(s, result)) {
                     return SOCKET_ACCEPT;
                 }
                 break;
+            case SOCKET_TYPE_INVALID:
+                fprintf(stderr, "socket-server: invalid socket \n");
+                break;
             default:
+                if (e->read) {
+                    if (s->protocol == PROTOCOL_TCP) {
+                    }
+                    if (e->write) {
+                        e->read = false;
+                        --event_index;
+                    }
+                }
                 break;
         }
     }
@@ -434,5 +459,334 @@ int socket_server::start_socket(struct request_start * request, struct socket_me
     }
 
     return -1;
+}
+
+int socket_server::server_bind(uintptr_t opaque, int fd) 
+{
+    struct request_package request;
+    int id = reserve_id();
+    if (id < 0) {
+        return -1;
+    }
+    request.u.bind.opaque = opaque;
+    request.u.bind.id = id;
+    request.u.bind.fd = fd;
+    send_request(&request, 'B', sizeof(request.u.bind));
+    return id;
+}
+
+int socket_server::bind_socket(struct request_bind * request, struct socket_message * result)
+{
+    int id = request->id;
+    result->id = id;
+    result->opaque = request->opaque;
+    result->ud = 0;
+    struct socket * s = new_socket(id, request->fd, PROTOCOL_TCP, request->opaque, true);
+    if (s == nullptr) {
+        result->data = nullptr;
+        return SOCKET_ERROR;
+    }
+    nonblocking(request->fd);
+    s->type = SOCKET_TYPE_BIND;
+    result->data = (char *)"binding";
+    return SOCKET_OPEN;
+}
+
+int socket_server::server_connect(uintptr_t opaque, const char * addr, int port)
+{
+    struct request_package request;
+    int len = open_request(&request, opaque, addr, port);
+    if (len < 0) {
+        return -1;
+    }
+    send_request(&request, 'O', sizeof(request.u.open) + len);
+    return request.u.open.id;
+}
+
+int socket_server::open_request(struct request_package * req, uintptr_t opaque, const char * addr, int port)
+{
+    int len = strlen(addr);
+    if (len + sizeof(req->u.open) > 256) {
+        fprintf(stderr, "socket-server : Invalid addr %s.\n", addr);
+        return -1;
+    }
+    int id = reserve_id();
+    if (id < 0) {
+        return -1;
+    }
+    req->u.open.opaque = opaque;
+    req->u.open.id = id;
+    req->u.open.port = port;
+    memcpy(req->u.open.host, addr, len);
+    req->u.open.host[len] = '\0';
+
+    return len;
+}
+
+int socket_server::open_socket(struct request_open * request, struct socket_message * result)
+{
+    int id = request->id;
+    result->id = id;
+    result->opaque = request->opaque;
+    result->ud = 0;
+    result->data = nullptr;
+    struct socket *ns;
+    int status;
+    struct addrinfo ai_hints;
+    struct addrinfo * ai_list = nullptr;
+    struct addrinfo * ai_ptr = nullptr;
+    char port[16];
+    sprintf(port, "%d", request->port);
+    memset(&ai_hints, 0, sizeof(ai_hints));
+    ai_hints.ai_family = AF_UNSPEC;
+    ai_hints.ai_socktype = SOCK_STREAM;
+    ai_hints.ai_protocol = IPPROTO_TCP;
+
+    status = getaddrinfo(request->host, port, &ai_hints, &ai_list);
+    int sock = -1;
+    if (status != 0) {
+        goto _failed;
+    }
+    for (ai_ptr = ai_list; ai_list != nullptr; ai_ptr = ai_ptr->ai_next) {
+        sock = socket(ai_ptr->ai_family, ai_ptr->ai_socktype, ai_ptr->ai_protocol);
+        if (sock < 0) {
+            continue;
+        }
+        keepalive(sock);
+        nonblocking(sock);
+        status = connect(sock, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
+        if (status != 0 && errno != EINPROGRESS) {
+            close(sock);
+            sock = -1;
+            continue;
+        }
+        break;
+    }
+
+    if (sock < 0) {
+        goto _failed;
+    }
+
+    ns = new_socket(id, sock, PROTOCOL_TCP, request->opaque, true);
+    if (status == 0) {
+        ns-> type = SOCKET_TYPE_CONNECTED;
+        struct sockaddr * addr = ai_ptr->ai_addr;
+        void * sin_addr = (ai_ptr->ai_family == AF_INET) ? (void *)&((struct sockaddr_in *)addr)->sin_addr : (void *)&((struct sockaddr_in6 *)addr)->sin6_addr;
+        if (inet_ntop(ai_ptr->ai_family, sin_addr, buffer, sizeof(buffer))) {
+            result->data = buffer;
+        }
+        freeaddrinfo(ai_list);
+        return SOCKET_OPEN;
+    } else {
+        ns->type = SOCKET_TYPE_CONNECTING;
+        event_fd.write(ns->fd, ns, true);
+    }
+
+    freeaddrinfo(ai_list);
+    return -1;
+
+_failed:
+    freeaddrinfo(ai_list);
+    slot[HASH_ID(id)].type = SOCKET_TYPE_INVALID;
+    return SOCKET_ERROR;
+}
+
+int socket_server::report_connect(struct socket *s, struct socket_message *result)
+{
+    int error;
+    socklen_t len = sizeof(error);
+    int code = getsockopt(s->fd, SOL_SOCKET, SO_ERROR, &error, &len);
+    if (code < 0 || error) {
+        force_close(s, result);
+        return SOCKET_ERROR;
+    } else {
+        s->type = SOCKET_TYPE_CONNECTED;
+        result->opaque = s->opaque;
+        result->id = s->id;
+        result->ud = 0;
+        if (send_buffer_empty(s)) {
+            event_fd.write(s->fd, s, false);
+        }
+        union sockaddr_all u;
+        socklen_t slen = sizeof(u);
+        if (getpeername(s->fd, &u.s, &slen)) {
+            void * sin_addr = (u.s.sa_family == AF_INET) ? (void *)&u.v4.sin_addr : (void *)&u.v6.sin6_addr;
+            if (inet_ntop(u.s.sa_family, sin_addr, buffer, sizeof(buffer))) {
+                result->data = buffer;
+                return SOCKET_OPEN;
+            }
+        }
+        result->data = nullptr;
+        return SOCKET_OPEN;
+    }
+}
+
+void socket_server::force_close(struct socket * s, socket_message * result)
+{
+    result->id = s->id;
+    result->ud = 0;
+    result->data = nullptr;
+    result->opaque = s->opaque;
+    if (s->type == SOCKET_TYPE_INVALID) {
+        return;
+    }
+    assert(s->type != SOCKET_TYPE_RESERVE);
+    s->high.wb_clear();
+    s->low.wb_clear();
+    if (s->type != SOCKET_TYPE_PACCEPT && s->type != SOCKET_TYPE_PLISTEN) {
+        event_fd.del(s->fd);
+    }
+    if (s->type != SOCKET_TYPE_BIND) {
+        close(s->fd);
+    }
+    s->type = SOCKET_TYPE_INVALID;
+    return;
+}
+
+int socket_server::send_list_tcp(struct socket *s, struct wb_list *list, struct socket_message *result)
+{
+    while (list->head) {
+        struct write_buffer * tmp = list->head;
+        for ( ; ; ) {
+            int sz = write(s->fd, tmp->ptr, tmp->sz);
+            if (sz < 0) {
+                switch(errno) {
+                    case EINTR:
+                        continue;
+                    case EAGAIN:
+                        return -1;
+                }
+                force_close(s, result);
+                return SOCKET_CLOSE;
+            }
+            s->wb_size -= sz;
+            if (sz != tmp->sz) {
+                tmp->ptr += sz;
+                tmp->sz -= sz;
+                return -1;
+            }
+            break;
+        }
+        list->head = tmp->next;
+        free(tmp->buffer);
+        free(tmp);
+    }
+    list->tail = nullptr;
+    return -1;
+}
+
+int socket_server::send_list(struct socket *s, struct wb_list *list, struct socket_message *result)
+{
+    if (s->type == PROTOCOL_TCP) {
+        return send_list_tcp(s, list, result);
+    } else {
+        return 0;
+    }
+}
+
+int socket_server::list_uncomplete(struct wb_list * s)
+{
+    struct write_buffer * wb = s->head;
+    if (wb == nullptr) {
+        return 0;
+    }
+    return (void *)wb->ptr != wb->buffer;
+}
+
+void socket_server::raise_uncomplete(struct socket * s) 
+{
+    struct wb_list * low = &s->low;
+    struct write_buffer * tmp = low->head;
+    low->head = tmp->next;
+    if (low->head == nullptr) {
+        low->tail = nullptr;
+    }
+
+    struct wb_list * high = &s->high;
+    assert(high->head == nullptr);
+
+    tmp->next = nullptr;
+    high->head = high->tail = tmp;
+}
+
+int socket_server::send_buffer(struct socket * s, struct socket_message * result)
+{
+    assert(!list_uncomplete(&s->low));
+    if (send_list(s, &s->high, result) == SOCKET_CLOSE) {
+        return SOCKET_CLOSE;
+    }
+    if (s->high.head == nullptr) {
+        if (s->low.head != nullptr) {
+            if (send_list(s, &s->low, result) == SOCKET_CLOSE) {
+                return SOCKET_CLOSE;
+            }
+            if (list_uncomplete(&s->low)) {
+                raise_uncomplete(s);
+            }
+        } else {
+            event_fd.write(s->fd, s, false);
+            if (s->type == SOCKET_TYPE_HALFCLOSE) {
+                force_close(s, result);
+                return SOCKET_CLOSE;
+            }
+        }
+    }
+
+    return -1;
+}
+
+int socket_server::close_socket(struct request_close * request, struct socket_message * result)
+{
+    int id = request->id;
+    struct socket * s = &slot[HASH_ID(id)];
+    if (s->type == SOCKET_TYPE_INVALID || s->id != id) {
+        result->id = id;
+        result->opaque = request->opaque;
+        result->ud = 0;
+        result->data = nullptr;
+        return SOCKET_CLOSE;
+    }
+    if (!send_buffer_empty(s)) {
+        int type = send_buffer(s, result);
+        if (type == -1) {
+            return type;
+        }
+    }
+    if (send_buffer_empty(s)) {
+        force_close(s, result);
+        result->id = id;
+        result->opaque = request->opaque;
+        return SOCKET_CLOSE;
+    }
+    s->type = SOCKET_TYPE_HALFCLOSE;
+    return -1;
+}
+
+void socket_server::setopt_socket(struct request_setopt * request)
+{
+    int id = request->id;
+    struct socket * s = &slot[HASH_ID(id)];
+    if (s->type == SOCKET_TYPE_INVALID || s->id != id) {
+        return;
+    }
+    int val = request->value;
+    setsockopt(s->fd, IPPROTO_TCP, request->what, &val, sizeof(val));
+    return;
+}
+
+void socket_server::clear_closed_event(struct socket_message * result, int type)
+{
+    if (type == SOCKET_CLOSE || type == SOCKET_ERROR) {
+        int id = result->id;
+        for (int i = event_index; i < event_n; i++) {
+            struct event * e = &ev[i];
+            struct socket * s = (struct socket *)e->s;
+            if (s) {
+                if (s->type == SOCKET_TYPE_INVALID && s->id == id) {
+                    e->s = nullptr;
+                }
+            }
+        }
+    }
 }
 
