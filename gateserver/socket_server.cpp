@@ -843,3 +843,71 @@ int socket_server::forward_message_tcp(struct socket * s, struct socket_message 
     return SOCKET_DATA;
 }
 
+void socket_server::server_exit()
+{
+    struct request_package request;
+    send_request(&request, 'X', 0);
+}
+
+void socket_server::server_close(uintptr_t opaque, int id) 
+{
+    struct request_package request;
+    request.u.close.id = id;
+    request.u.close.opaque = opaque;
+    send_request(&request, 'K', sizeof(request.u.close));
+}
+
+int64_t socket_server::server_send(int id, const void * buffer, int sz)
+{
+    struct socket * s = &slot[HASH_ID(id)];
+    if (id != s->id || s->type == SOCKET_TYPE_INVALID) {
+        //free(buffer);
+        return -1;
+    }
+
+    struct request_package request;
+    request.u.send.id = id;
+    request.u.send.sz = sz;
+    request.u.send.buffer = (char *)buffer;
+
+    send_request(&request, 'D', sizeof(request.u.send));
+
+    return s->wb_size;
+}
+
+int socket_server::send_socket(struct request_send * request, struct socket_message * result, int priority)
+{
+    int id = request->id;
+    struct socket *s = &slot[HASH_ID(id)];
+    if (s->type == SOCKET_TYPE_INVALID
+            || s->id != id
+            || s->type == SOCKET_TYPE_HALFCLOSE
+            || s->type == SOCKET_TYPE_PACCEPT) {
+        return -1;
+    }
+    assert(s->type != SOCKET_TYPE_PLISTEN && s->type != SOCKET_TYPE_LISTEN);
+    if (send_buffer_empty(s) && s->type == SOCKET_TYPE_CONNECTED) {
+        if (s->protocol == PROTOCOL_TCP) {
+            int n = write(s->fd, request->buffer, request->sz);
+            if (n < 0) {
+                switch (errno) {
+                    case EINTR:
+                    case EAGAIN:
+                        n = 0;
+                        break;
+                    default:
+                        fprintf(stderr, "socket-server: write to %d (fd=%d) error: %s.\n", id, s->fd, strerror(errno));
+                        force_close(s, result);
+                        return SOCKET_CLOSE;
+                }
+            }
+            if (n == request->sz)
+            {
+                return -1;
+            }
+        }
+    }
+
+    return -1;
+}
+

@@ -145,6 +145,11 @@ class socket_server
         int server_connect(uintptr_t opaque, const char * addr, int port);
         int poll(struct socket_message * result, int *more);
 
+        void server_exit();
+        void server_close(uintptr_t opaque, int id);
+
+        int64_t server_send(int id, const void * buffer, int sz);
+
     private:
         int do_bind(const char *host, int port, int protocol, int *family);
         int do_listen(const char *host, int port, int backlog);
@@ -163,6 +168,7 @@ class socket_server
         int open_request(struct request_package * req, uintptr_t opaque, const char * addr, int port);
         int open_socket(struct request_open * request, struct socket_message * result);
         int close_socket(struct request_close * request, struct socket_message * result);
+        int send_socket(struct request_send * request, struct socket_message * result, int priority);
 
         void keepalive(int fd);
         void nonblocking(int fd);
