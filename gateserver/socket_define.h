@@ -30,4 +30,6 @@
 #define PROTOCOL_UDP 1
 #define PROTOCOL_UDPv6 2
 
+#define MIN_READ_BUFFER 64
+
 #endif

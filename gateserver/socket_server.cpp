@@ -316,12 +316,26 @@ int socket_server::poll(struct socket_message * result, int * more)
                 break;
             default:
                 if (e->read) {
+                    int type = -1;
                     if (s->protocol == PROTOCOL_TCP) {
+                        type = forward_message_tcp(s, result);
                     }
                     if (e->write) {
                         e->read = false;
                         --event_index;
                     }
+                    if (type == -1) {
+                        break;
+                    }
+                    clear_closed_event(result, type);
+                    return type;
+                }
+                if (e->write) {
+                    int type = send_buffer(s, result);
+                    if (type == -1)
+                        break;
+                    clear_closed_event(result, type);
+                    return type;
                 }
                 break;
         }
@@ -788,5 +802,44 @@ void socket_server::clear_closed_event(struct socket_message * result, int type)
             }
         }
     }
+}
+
+int socket_server::forward_message_tcp(struct socket * s, struct socket_message * result)
+{
+    int sz = s->size;
+    char * buffer = (char *)malloc(sz);
+    int n = (int)read(s->fd, buffer, sz);
+    if (n < 0) {
+        free(buffer);
+        switch(errno) {
+            case EINTR:
+                break;
+            case EAGAIN:
+                fprintf(stderr, "socket-server: EAGAIN capture.\n");
+                break;
+            default:
+                force_close(s, result);
+        }
+        return -1;
+    }
+    if (n == 0) {
+        free(buffer);
+        return -1;
+    }
+    if (s->type == SOCKET_TYPE_HALFCLOSE) {
+        free(buffer);
+        return -1;
+    }
+    if (n == sz) {
+        s->size *= 2;
+    } else if (sz > MIN_READ_BUFFER && n*2 < sz) {
+        s->size /= 2;
+    }
+
+    result->opaque = s->opaque;
+    result->id = s->id;
+    result->ud = n;
+    result->data = buffer;
+    return SOCKET_DATA;
 }
 

@@ -179,6 +179,8 @@ class socket_server
         void raise_uncomplete(struct socket * s);
         int send_buffer(struct socket * s, struct socket_message * result);
         int send_buffer_empty(struct socket * s) { return (s->high.head == nullptr && s->low.head == nullptr); }
+
+        int forward_message_tcp(struct socket * s, struct socket_message * result);
     private:
         int recvctrl_fd;
         int sendctrl_fd;
