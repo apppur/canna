@@ -248,7 +248,8 @@ int socket_server::ctrl_cmd(struct socket_message * result)
             result->data = nullptr;
             return SOCKET_EXIT;
         case 'D':
-            break;
+            printf("*****************send data*******************\n");
+            return send_socket((struct request_send *)buffer, result, PRIORITY_HIGH);
         case 'P':
             break;
         case 'A':
@@ -905,6 +906,7 @@ int socket_server::send_socket(struct request_send * request, struct socket_mess
             {
                 return -1;
             }
+            event_fd.write(s->fd, s, true);
         }
     }
 

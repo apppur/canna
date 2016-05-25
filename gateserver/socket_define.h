@@ -32,4 +32,7 @@
 
 #define MIN_READ_BUFFER 64
 
+#define PRIORITY_HIGH 0
+#define PRIORITY_LOW 1
+
 #endif

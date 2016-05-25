@@ -9,9 +9,13 @@ static void * client(void * ud)
         printf("socket server ptr: null\n");
         return nullptr;
     }
-    for (int i = 0; i < 3; i++) {
-        s->server_connect(400+i, "127.0.0.1", 8888);
-    }
+    sleep(5);
+    int id = s->server_connect(400, "127.0.0.1", 8888);
+    sleep(5);
+    const char * info = "hello world";
+    char * data = (char *)malloc(strlen(info));
+    memcpy(data, info, strlen(info));
+    s->server_send(id, data, strlen(info));
 
     while (true) {
         sleep(5);
@@ -29,7 +33,7 @@ int main(int argc, char **argv)
     pthread_create(&pid, nullptr, client, &server);
     //pthread_join(pid, nullptr);
 
-    printf("==========server poll run=============");
+    printf("==========server poll run=============\n");
     struct socket_message result;
     int more;
     for ( ; ; ) {
