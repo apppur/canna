@@ -6,6 +6,7 @@
 #include "zmq.hpp"
 
 #define CANNA_RAND(seed) (int) ((float)(seed)*random()/(RAND_MAX + 1.0))
+#define DAEMON_MODE 1
 
 uint64_t canna_gettime();
 
