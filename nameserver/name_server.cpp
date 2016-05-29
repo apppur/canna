@@ -125,3 +125,13 @@ std::string name_server::sock_setid(zmq::socket_t &socket)
 
     return ss.str();
 }
+
+void name_server::responder_create()
+{
+    m_responder = sock_create(ZMQ_REP);
+}
+
+void name_server::publisher_create()
+{
+    m_publisher = sock_create(ZMQ_PUB);
+}

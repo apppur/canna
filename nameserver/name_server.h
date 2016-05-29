@@ -13,6 +13,10 @@ class name_server
         int initialize();
 
     public:
+        void responder_create();
+        void publisher_create();
+
+    public:
         zmq::socket_t * sock_create(int type);
         void sock_bind(zmq::socket_t * sock, const char * addr);
         void sock_setopt(zmq::socket_t * sock);
