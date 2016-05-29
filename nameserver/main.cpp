@@ -5,6 +5,7 @@
 
 #include "redis_client.h"
 #include "name_ctrl.h"
+#include "name_server.h"
 #include "canna_core.h"
 #include "canna_daemon.h"
 
@@ -22,6 +23,8 @@ int main(int argc, char ** argv)
         exit(0);
     }
 
+    name_server nameserver;
+    nameserver.initialize();
     name_ctrl namectrl;
     for (int i = 0; i < 64; i++) {
         std::string str = namectrl.allotnamepair("cluster");

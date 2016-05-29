@@ -16,7 +16,7 @@ CC = g++ --std=c++11
 
 all : nameserver 
 
-nameserver : main.cpp redis_client.cpp name_ctrl.cpp ../core/canna_daemon.cpp ../core/canna_core.cpp
+nameserver : main.cpp redis_client.cpp name_ctrl.cpp name_server.cpp ../core/canna_daemon.cpp ../core/canna_core.cpp
 	$(CC) -o $@ $^ $(INC) $(LIBS) $(HIREDIS_LIB) $(ZEROMQ_LIB)
 
 clean :
