@@ -17,14 +17,22 @@ int main(int argc, char ** argv)
 {
     initialize(DAEMON_MODE);
 
+    /*
     redis_client redisclient;
     redisclient.initialize("127.0.0.1", 6379);
     if (redisclient.connect() != 0) {
         exit(0);
     }
+    */
 
     name_server nameserver;
     nameserver.initialize();
+    nameserver.responder_create();
+    nameserver.responder_bind("tcp://*:5555");
+    //nameserver.publisher_create();
+    //nameserver.publisher_bind("tcp://*:5556");
+    nameserver.server_loop();
+
     name_ctrl namectrl;
     for (int i = 0; i < 64; i++) {
         std::string str = namectrl.allotnamepair("cluster");

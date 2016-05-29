@@ -15,6 +15,10 @@ class name_server
     public:
         void responder_create();
         void publisher_create();
+        void responder_bind(const char * addr);
+        void publisher_bind(const char * addr);
+
+        void server_loop();
 
     public:
         zmq::socket_t * sock_create(int type);

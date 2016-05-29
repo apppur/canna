@@ -135,3 +135,34 @@ void name_server::publisher_create()
 {
     m_publisher = sock_create(ZMQ_PUB);
 }
+
+void name_server::responder_bind(const char * addr)
+{
+    sock_bind(m_responder, addr);
+}
+
+void name_server::publisher_bind(const char * addr)
+{
+    sock_bind(m_publisher, addr);
+}
+
+void name_server::server_loop()
+{
+    zmq::pollitem_t pollset[] = {
+        {(void *)m_responder, 0, ZMQ_POLLIN, 0}
+    };
+
+    while (true) {
+        zmq::poll(pollset, 1, 0);
+
+        if (pollset[0].revents & ZMQ_POLLIN) {
+            std::string req = sock_recv(*m_responder);
+            std::cout << "GET REQUEST: " << req << std::endl;
+    
+            sock_send(*m_responder, "PONG");
+            sock_send(*m_publisher, "CLUSTER");
+        }
+    }
+
+    return;
+}
