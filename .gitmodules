@@ -13,3 +13,6 @@
 [submodule "3rd/mongo-c-driver"]
 	path = 3rd/mongo-c-driver
 	url = https://github.com/mongodb/mongo-c-driver.git
+[submodule "3rd/protobuf"]
+	path = 3rd/protobuf
+	url = https://github.com/google/protobuf.git
