@@ -129,6 +129,7 @@ std::string name_server::sock_setid(zmq::socket_t &socket)
 void name_server::responder_create()
 {
     m_responder = sock_create(ZMQ_REP);
+    //m_responder = (zmq::socket_t *) new zmq::socket_t (*m_context, ZMQ_REP);
 }
 
 void name_server::publisher_create()
@@ -149,10 +150,11 @@ void name_server::publisher_bind(const char * addr)
 void name_server::server_loop()
 {
     zmq::pollitem_t pollset[] = {
-        {(void *)m_responder, 0, ZMQ_POLLIN, 0}
+        {(void *)*m_responder, 0, ZMQ_POLLIN, 0}
     };
 
     while (true) {
+        canna_sleep(100);
         zmq::poll(pollset, 1, 0);
 
         if (pollset[0].revents & ZMQ_POLLIN) {
