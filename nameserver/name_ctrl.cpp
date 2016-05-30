@@ -27,8 +27,8 @@ std::string name_ctrl::allotnamepair(std::string name)
                 iter->second.serial = serial;
                 iter->second.bitset = bitset;
                 char buff[128];
-                memset(buff, 0, sizeof(buff));
-                sprintf(buff, "%.4o", serial);
+                memset(buff, '\0', sizeof(buff));
+                sprintf(buff, "-%.4o", serial);
                 printf("serail: %d, buff: %s\n", serial, buff);
                 std::string str = buff;
                 return (name+str);
@@ -39,6 +39,7 @@ std::string name_ctrl::allotnamepair(std::string name)
         namepair.serial = 0;
         std::pair<std::string, name_pair> newpair(name, namepair);
         m_serialmap.insert(newpair);
-        return (name+"0");
+        printf("serail: 0, buff: %s-0000\n", name.c_str());
+        return (name+"0000");
     }
 }

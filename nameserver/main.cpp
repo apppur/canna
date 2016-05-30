@@ -33,15 +33,6 @@ int main(int argc, char ** argv)
     nameserver.publisher_bind("tcp://*:5556");
     nameserver.server_loop();
 
-    name_ctrl namectrl;
-    for (int i = 0; i < 64; i++) {
-        std::string str = namectrl.allotnamepair("cluster");
-        std::cout << str << std::endl;
-    }
-    while (true) {
-        canna_sleep(1000);
-    }
-
     return 0;
 }
 

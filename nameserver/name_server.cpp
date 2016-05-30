@@ -3,6 +3,7 @@
 #include <iomanip>
 #include "canna_core.h"
 #include "name_server.h"
+#include "name_ctrl.h"
 
 name_server::name_server()
 {
@@ -153,16 +154,21 @@ void name_server::server_loop()
         {(void *)*m_responder, 0, ZMQ_POLLIN, 0}
     };
 
+    name_ctrl namectrl;
+
     while (true) {
         canna_sleep(100);
         zmq::poll(pollset, 1, 0);
 
         if (pollset[0].revents & ZMQ_POLLIN) {
-            std::string req = sock_recv(*m_responder);
-            std::cout << "GET REQUEST: " << req << std::endl;
+
+            std::string group = sock_recv(*m_responder);
+
+            std::string name  = namectrl.allotnamepair(group);
+            std::cout << "GET REQUEST: " << group << std::endl;
     
-            sock_send(*m_responder, "PONG");
-            sock_send(*m_publisher, "CLUSTER");
+            sock_send(*m_responder, name);
+            sock_send(*m_publisher, name);
         }
     }
 

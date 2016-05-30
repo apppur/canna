@@ -17,7 +17,7 @@ int main(int argc, char ** argv)
 
     canna_sleep(2000);
 
-    canna_send(requester, "Hello cluster name");
+    canna_send(requester, "cluster");
     
     zmq::pollitem_t pollset[] = {
         {(void *)requester, 0, ZMQ_POLLIN, 0},
