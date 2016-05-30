@@ -19,3 +19,6 @@
 [submodule "3rd/googlemock"]
 	path = 3rd/googlemock
 	url = https://github.com/google/googlemock.git
+[submodule "3rd/googletest"]
+	path = 3rd/googletest
+	url = https://github.com/google/googletest.git
