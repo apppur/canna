@@ -16,3 +16,6 @@
 [submodule "3rd/protobuf"]
 	path = 3rd/protobuf
 	url = https://github.com/google/protobuf.git
+[submodule "3rd/googlemock"]
+	path = 3rd/googlemock
+	url = https://github.com/google/googlemock.git
