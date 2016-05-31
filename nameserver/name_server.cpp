@@ -1,9 +1,11 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <vector>
 #include "canna_core.h"
 #include "name_server.h"
 #include "name_ctrl.h"
+#include "nameinfo.pb.h"
 
 name_server::name_server()
 {
@@ -166,8 +168,15 @@ void name_server::server_loop()
 
             std::string name  = namectrl.allotnamepair(group);
             std::cout << "GET REQUEST: " << group << std::endl;
-    
-            sock_send(*m_responder, name);
+            std::vector<std::string> namelist = namectrl.getnamelist(group);
+            NameInfo nameinfo;
+            for (auto & x : namelist) {
+                nameinfo.add_name(x);
+            }
+            std::string msg;
+            nameinfo.SerializeToString(&msg);
+
+            sock_send(*m_responder, msg);
             sock_send(*m_publisher, name);
         }
     }

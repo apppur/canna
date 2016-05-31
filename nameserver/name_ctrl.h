@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <bitset>
+#include <vector>
 
 #define SERIAL_SIZE 256
 struct name_pair
@@ -18,7 +19,7 @@ class name_ctrl
         name_ctrl();
         ~name_ctrl();
 
-        //std::vector<name_pair> getnamelist(std::string name);
+        std::vector<std::string> getnamelist(std::string name);
         std::string allotnamepair(std::string name);
         //bool existname(std::string name);
 

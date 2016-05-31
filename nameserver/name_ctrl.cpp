@@ -37,9 +37,37 @@ std::string name_ctrl::allotnamepair(std::string name)
     } else {
         name_pair namepair;
         namepair.serial = 0;
+        namepair.bitset.set(0);
         std::pair<std::string, name_pair> newpair(name, namepair);
         m_serialmap.insert(newpair);
         printf("serail: 0, buff: %s-0000\n", name.c_str());
-        return (name+"0000");
+        return (name+"-0000");
     }
 }
+
+std::vector<std::string> name_ctrl::getnamelist(std::string name)
+{
+    std::vector<std::string> namelist;
+    std::unordered_map<std::string, name_pair>::iterator iter = m_serialmap.find(name);
+    if (iter != m_serialmap.end()) {
+        std::bitset<SERIAL_SIZE> bitset = iter->second.bitset;
+        int total = bitset.count();
+        int count = 0;
+        for (int i = 0; i < SERIAL_SIZE; i++) {
+            if (bitset.test(i)) {
+                count++;
+                char buff[128];
+                memset(buff, '\0', sizeof(buff));
+                sprintf(buff, "-%.4o", i);
+                std::string str = name + buff;
+                namelist.push_back(str);
+                if (count >= total) {
+                    break;
+                }
+            }
+        }
+    }
+
+    return namelist;
+}
+

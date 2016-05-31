@@ -1,0 +1,5 @@
+syntax = "proto2";
+
+message NameInfo {
+    repeated string name = 1;
+}

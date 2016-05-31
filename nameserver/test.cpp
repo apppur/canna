@@ -3,6 +3,7 @@
 
 #include "zmq.hpp"
 #include "canna_core.h"
+#include "nameinfo.pb.h"
 
 int main(int argc, char ** argv)
 {
@@ -29,7 +30,11 @@ int main(int argc, char ** argv)
 
         if (pollset[0].revents & ZMQ_POLLIN) {
             std::string res = canna_recv(requester);
-            std::cout << "RES: " << res << std::endl;
+            NameInfo nameinfo;
+            nameinfo.ParseFromString(res);
+            for (int i = 0; i < nameinfo.name_size(); i++) {
+                std::cout << "RES: " << nameinfo.name(i) << std::endl;
+            }
         }
 
         if (pollset[1].revents & ZMQ_POLLIN) {
