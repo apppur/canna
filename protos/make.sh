@@ -6,7 +6,7 @@
 rm *.pb.h *.pb.cc 1>/dev/null 2>&1
 for i in *.proto
 do
-  protoc -I. --cpp_out=. $i
+  ../3rd/libprotobuf/bin/protoc -I. --cpp_out=. $i
   if [ "$?" -eq 0 ]
   then
     echo "generator $i.pb.h $i.pb.cc"
