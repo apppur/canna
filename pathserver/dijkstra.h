@@ -10,6 +10,7 @@ class Dijkstra {
         ~Dijkstra() {}
 
         void ShortPath(const Graph & graph, int src);
+        void GetPath(const Graph & graph, int src, int des);
 };
 
 #endif

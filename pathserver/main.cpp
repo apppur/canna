@@ -22,6 +22,9 @@ int main() {
 
     Dijkstra dijkstra;
     dijkstra.ShortPath(graph, 0);
+    dijkstra.GetPath(graph, 0, 4);
+    dijkstra.GetPath(graph, 0, 8);
+    dijkstra.GetPath(graph, 7, 2);
 
     return 0;
 }
