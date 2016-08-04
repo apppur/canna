@@ -13,16 +13,17 @@ PROTOFILE_INC ?= ../protos
 
 CORE_INC ?= ../core
 
-INC := -I$(CORE_INC) -I$(HIREDIS_INC) -I$(ZEROMQ_INC) -I$(PROTOBUF_INC) -I$(PROTOFILE_INC)
+INC := -I$(CORE_INC) 
+##-I$(HIREDIS_INC) -I$(ZEROMQ_INC) -I$(PROTOBUF_INC) -I$(PROTOFILE_INC)
 SRC := $(wildcard *.cpp)
 LIBS := -lpthread
 
-CC = g++ --std=c++11
+CC = g++ --std=c++11 -Wl,--no-as-needed
 
 all : pathserver 
 
 pathserver: main.cpp graph.cpp dijkstra.cpp 
-	$(CC) -o $@ $^
+	$(CC) -o $@ $^ $(INC) $(LIBS)
 
 clean :
 	rm pathserver

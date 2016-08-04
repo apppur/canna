@@ -1,5 +1,19 @@
 #include "graph.h"
 #include "dijkstra.h"
+#include "thread_safe_queue.h"
+#include "thread_pool.h"
+
+#include <unistd.h>
+#include <iostream>
+#include <functional>
+
+void Sum() {
+    int sum = 0;
+    for (int i = 0; i < 100000000; i++) {
+        sum += i;
+    }
+    std::cout << "Hello Concurrency! Sum:" << sum << std::endl;
+}
 
 int main() {
     int v = 9;
@@ -25,6 +39,19 @@ int main() {
     dijkstra.GetPath(graph, 0, 4);
     dijkstra.GetPath(graph, 0, 8);
     dijkstra.GetPath(graph, 7, 2);
+
+    ThreadPool pool;
+    std::function<void()> fun = []() {std::cout << "Hello Concurrency!" << std::endl;};
+    pool.submit(fun);
+
+    for (int i = 0; i < 20; i++) {
+        std::function<void()> fun = Sum;
+        pool.submit(fun);
+    }
+
+    while (true) {
+        sleep(3);
+    }
 
     return 0;
 }
