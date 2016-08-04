@@ -48,7 +48,7 @@ class ThreadPool {
             thread_count = thread_count < 2 ? 2 : thread_count;
             try {
                 for (unsigned i = 0; i < thread_count; i++) {
-                    std::cout << "work " << i  << " thread run ..." << std::endl;
+                    std::cout << "work " << std::this_thread::get_id() << " thread run ..." << std::endl;
                     m_threads.push_back(std::thread(&ThreadPool::work, this));
                 }
             } catch (...) {
